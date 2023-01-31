@@ -35,7 +35,7 @@ contract Bet {
   uint256 public immutable i_startUpdating;
   uint256 public immutable i_interval;
 
-  Status public  i_status = Satus.Idle;
+  Status public  i_status = Status.Idle;
   Pick public i_favorite;
   Pick public i_dog;
 
@@ -61,12 +61,12 @@ contract Bet {
 
   function bet(bool wantsFavorite) external payable {
 
-    if (this.status != Status.Initialized) {
-      revert Bet__ContracInWrongStatus(this.i_status);
+    if (i_status != Status.Initialized) {
+      revert Bet__ContracInWrongStatus(i_status);
     }
     
     if (msg.value < MINIMUM_BET) {
-      revert Bet__SendMoreToBet(this.MINIMUM_BET);
+      revert Bet__SendMoreToBet(this.MINIMUM_BET());
     }
 
     uint256 max = (this.getBalacnce()*100)/(wantsFavorite ? i_favorite.line : i_dog.line);
@@ -77,12 +77,12 @@ contract Bet {
     uint256 newB = msg.value + this.getBalacnce();
     uint256 oldFavPerc = (i_favorite.line/100)* this.getBalacnce();
     if (wantsFavorite) {
-      bets[msg.sender] = SingleBet(i_favorite.line, msg.value, true);
+      s_bets[msg.sender] = SingleBet(i_favorite.line, msg.value, true);
       s_favoritters.push(payable(msg.sender));
       i_favorite.line = ((oldFavPerc * newB) / this.getBalacnce()) * 100;
       i_dog.line = 100 - i_favorite.line;
     } else {
-      bets[msg.sender] = SingleBet(i_favorite.line, msg.value, false);
+      s_bets[msg.sender] = SingleBet(i_favorite.line, msg.value, false);
       s_doggers.push(payable(msg.sender));
       i_dog.line = ((oldFavPerc * newB) / this.getBalacnce()) * 100;
       i_favorite.line = 100 - i_dog.line;
@@ -91,34 +91,34 @@ contract Bet {
     emit BetEnter(msg.sender);
   }
 
-  function getBalacnce() external view returns (uint8) {
-    address(this).balance;
+  function getBalacnce() external view returns (uint256) {
+      return address(this).balance;
   }
 
-  //TODO: onlyOwner dunction that should also set the line
+  //TODO: onlyOwner function that should also set the line
   function initialize() external payable {
-    if (this.status != Status.Idle) {
-      revert Bet__ContracInWrongStatus(this.i_status);
+    if (i_status != Status.Idle) {
+      revert Bet__ContracInWrongStatus(i_status);
     }
-    this.status = Status.Initialized;
+    i_status = Status.Initialized;
   }
 
   //TODO: should be onlyOwner
   function chargeHouse() external payable {
-    if (this.status != Status.Initialized) {
-      revert Bet__ContracInWrongStatus(this.i_status);
+    if (i_status != Status.Initialized) {
+      revert Bet__ContracInWrongStatus(i_status);
     }
     uint256 favePerc = i_favorite.line / 100;
-    bets[msg.sender] = SingleBet(i_favorite.line, (favePerc * msg.value), true);
+    s_bets[msg.sender] = SingleBet(i_favorite.line, (favePerc * msg.value), true);
     s_favoritters.push(payable(msg.sender));
-    bets[msg.sender] = SingleBet(i_dog.line, ((100 - favePerc) * msg.value), false);
+    s_bets[msg.sender] = SingleBet(i_dog.line, ((100 - favePerc) * msg.value), false);
     s_doggers.push(payable(msg.sender));
   }
 
   function distributeWinnings() public {
     // Check if the fight is over and the winner is known
     if (i_status < Status.FavoriteWon) {
-      revert Bet__ContracInWrongStatus(this.i_status);
+      revert Bet__ContracInWrongStatus(i_status);
     }
     //
     if (i_status == Status.FavoriteWon) {
