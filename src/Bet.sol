@@ -66,7 +66,9 @@ contract Bet {
   }
 
   modifier onlyOwner {
-    revert Bet__AccessDeniedOnlyOwner();
+    if (msg.sender != i_owner) {
+      revert Bet__AccessDeniedOnlyOwner();
+    }
     _;
   }
 
