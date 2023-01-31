@@ -16,6 +16,8 @@ enum Status {
   Draw
 }
 
+
+
 struct SingleBet {
   uint256 line;
   uint256 amount;
@@ -25,7 +27,7 @@ struct SingleBet {
 error Bet__SendMoreToBet(uint256 amount);
 error Bet__SendLessToBet(uint256 amount);
 error Bet__ContracInWrongStatus(Status status);
-
+error Bet__AccessDeniedOnlyOwner();
 
 contract Bet {
   uint256 public constant MINIMUM_BET = 0.005 ether;
@@ -35,6 +37,7 @@ contract Bet {
   uint256 public immutable i_startUpdating;
   uint256 public immutable i_interval;
 
+  address public i_owner;
   Status public  i_status = Status.Idle;
   Pick public i_favorite;
   Pick public i_dog;
@@ -46,17 +49,25 @@ contract Bet {
   
   event BetEnter(address indexed bettor);
 
+
+
   constructor(
     Pick memory favorite,
     Pick memory dog,
     uint256 startUpdating,
     uint256 interval
   ) {
+    i_owner = msg.sender;
     i_favorite = favorite;
     i_dog = dog;
     i_startUpdating = startUpdating;
     i_interval = interval;
     s_lastTimeStamp = block.timestamp;
+  }
+
+  modifier onlyOwner {
+    revert Bet__AccessDeniedOnlyOwner();
+    _;
   }
 
   function bet(bool wantsFavorite) external payable {
@@ -95,16 +106,15 @@ contract Bet {
       return address(this).balance;
   }
 
-  //TODO: onlyOwner function that should also set the line
-  function initialize() external payable {
+  //TODO: should also set the line
+  function initialize() external payable onlyOwner {
     if (i_status != Status.Idle) {
       revert Bet__ContracInWrongStatus(i_status);
     }
     i_status = Status.Initialized;
   }
 
-  //TODO: should be onlyOwner
-  function chargeHouse() external payable {
+  function chargeHouse() external payable onlyOwner {
     if (i_status != Status.Initialized) {
       revert Bet__ContracInWrongStatus(i_status);
     }
@@ -120,7 +130,7 @@ contract Bet {
     if (i_status < Status.FavoriteWon) {
       revert Bet__ContracInWrongStatus(i_status);
     }
-    //
+
     if (i_status == Status.FavoriteWon) {
       for (uint256 i = 0; i < s_favoritters.length; i++) {
         s_favoritters[i].transfer(s_bets[s_favoritters[i]].amount * i_favorite.line);
