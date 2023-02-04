@@ -11,6 +11,7 @@ enum Status {
   Idle,
   Initialized,
   FightStarted,
+  FetchingResult,
   FavoriteWon,
   DogWon,
   Draw
