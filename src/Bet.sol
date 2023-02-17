@@ -45,8 +45,6 @@ contract Bet {
 
   uint256 private s_lastTimeStamp;
   mapping (address => SingleBet) private s_bets;
-  address payable[] private s_favoritters;
-  address payable[] private s_doggers;
   
   event BetEnter(address indexed bettor);
 
@@ -92,12 +90,10 @@ contract Bet {
     uint256 oldFavPerc = (i_favorite.line/100)* this.getBalacnce();
     if (wantsFavorite) {
       s_bets[msg.sender] = SingleBet(i_favorite.line, msg.value, true);
-      s_favoritters.push(payable(msg.sender));
       i_favorite.line = ((oldFavPerc * newB) / this.getBalacnce()) * 100;
       i_dog.line = 100 - i_favorite.line;
     } else {
       s_bets[msg.sender] = SingleBet(i_favorite.line, msg.value, false);
-      s_doggers.push(payable(msg.sender));
       i_dog.line = ((oldFavPerc * newB) / this.getBalacnce()) * 100;
       i_favorite.line = 100 - i_dog.line;
     }
@@ -123,34 +119,10 @@ contract Bet {
     }
     uint256 favePerc = i_favorite.line / 100;
     s_bets[msg.sender] = SingleBet(i_favorite.line, (favePerc * msg.value), true);
-    s_favoritters.push(payable(msg.sender));
     s_bets[msg.sender] = SingleBet(i_dog.line, ((100 - favePerc) * msg.value), false);
-    s_doggers.push(payable(msg.sender));
   }
 
-  function distributeWinnings() public {
-    // Check if the fight is over and the winner is known
-    if (i_status < Status.FavoriteWon) {
-      revert Bet__ContracInWrongStatus(i_status);
-    }
 
-    if (i_status == Status.FavoriteWon) {
-      for (uint256 i = 0; i < s_favoritters.length; i++) {
-        s_favoritters[i].transfer(s_bets[s_favoritters[i]].amount * i_favorite.line);
-      }
-    } else if (i_status == Status.DogWon) {
-      for (uint256 i = 0; i < s_doggers.length; i++) {
-        s_doggers[i].transfer(s_bets[s_doggers[i]].amount * i_dog.line);
-      }
-    } else {
-      for (uint256 i = 0; i < s_favoritters.length; i++) {
-        s_favoritters[i].transfer(s_bets[s_favoritters[i]].amount);
-      }
-      for (uint256 i = 0; i < s_doggers.length; i++) {
-        s_doggers[i].transfer(s_bets[s_doggers[i]].amount);
-      }
-    }   
-  }
 
 }
 
