@@ -29,6 +29,8 @@ error Bet__SendMoreToBet(uint256 amount);
 error Bet__SendLessToBet(uint256 amount);
 error Bet__ContracInWrongStatus(Status status);
 error Bet__AccessDeniedOnlyOwner();
+error Bet__YouAreOnTheLosingSide(Status status);
+
 
 contract Bet {
   uint256 public constant MINIMUM_BET = 0.005 ether;
@@ -122,7 +124,24 @@ contract Bet {
     s_bets[msg.sender] = SingleBet(i_dog.line, ((100 - favePerc) * msg.value), false);
   }
 
+  function withdraw() external {
+    if (i_status < Status.FavoriteWon) {
+      revert Bet__ContracInWrongStatus(i_status);
+    }
 
+    SingleBet memory winnigBet = s_bets[msg.sender];
+    if (i_status == Status.FavoriteWon && winnigBet.favoritist) {
+      return payable(msg.sender).transfer(winnigBet.amount * winnigBet.line);
+    }
+    if (i_status == Status.DogWon && !winnigBet.favoritist) {
+      return payable(msg.sender).transfer(winnigBet.amount * winnigBet.line);
+    }
+    if (i_status == Status.Draw) {
+      return payable(msg.sender).transfer(winnigBet.amount);
+    }
+
+    revert Bet__YouAreOnTheLosingSide(i_status);
+  }
 
 }
 
